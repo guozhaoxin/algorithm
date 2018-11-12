@@ -21,10 +21,11 @@ class BDRTnode(BTNode):
         super(BDRTnode,self).__init__(left,right)
         self.parent = parent
 
-'''
-二叉树类
-'''
+
 class BTree(object):
+    '''
+    二叉树类，最重要的属性是它有一个根节点成员，不要直接对它操作
+    '''
     def __init__(self):
         '''
         二叉树的构造方法
@@ -146,6 +147,11 @@ class BTree(object):
 
     @classmethod
     def midOrderGenerator(cls,node):
+        '''
+        使用中序遍历的二叉树遍历生成器
+        :param node: TreeNode，表示树的根节点
+        :return: Iterator，二叉树中序遍历的生成器，每次返回的是当前遍历节点的值
+        '''
         stack = []
         curNode = node
         while curNode or stack:
@@ -339,12 +345,25 @@ class FINDBTree(BTree):
 
 
 class AVLTreeNode(BTNode):
+    '''
+    AVLTree类中的节点类型，它继承了BTNode类，同时增加了一个height属性作为节点的高度
+    '''
     def __init__(self,val,height = 1,left = None,right = None):
+        '''
+        构建AVLTreeNode对象
+        :param val: 节点的值，可以为任意类型
+        :param height: int，表示节点的高度
+        :param left: AVLTreeNode对象，表示节点的左子树根节点
+        :param right: AVLTreeNode对象，表示节点的右子树根节点
+        '''
         super(AVLTreeNode,self).__init__(val,left,right)
         self.height = height #AVL树中节点的高度，最底层为1
 
-'''AVL查找二叉树'''
+
 class AVLTree(FINDBTree):
+    '''
+    AVL二叉查找树类
+    '''
     def __init__(self):
         super(AVLTree,self).__init__()
 
@@ -358,35 +377,119 @@ class AVLTree(FINDBTree):
             root = AVLTreeNode(val,1)
             self.root = root
             return True
-        def dfs(node):
-            if node.val == val:
+        result = self.helper(self.root,val)
+        if result:
+            return True
+        return False
+
+    def helper(self,node,val):
+        '''
+        辅助将新值插入AVL树中
+        :param node: AVLTreeNode，表示当前处理的节点
+        :param val:要插入的值，可以为任意类型
+        :return: AVLTreeNode，如果成功就返回新增加的节点对象，它是AVLTreeNode类对象，
+                              失败则返回None，一般失败的原因是节点已经存在
+        '''
+
+        #先处理当前节点为空的情况，说明节点还不存在，需要在树的叶子处新增加一个并返回
+        if not node:
+            return AVLTreeNode(val)
+        if node.val == val:
+            return None
+        if node.val > val:
+            result = self.helper(node.left,val)
+            if not result:
+                return None
+            node.left = result
+            heightDiff = self.nodeHeight(node.left) - self.nodeHeight(node.right)
+            if abs(heightDiff) <= 1:
+                node.height = max(self.nodeHeight(node.left),self.nodeHeight(node.right)) + 1
                 return node
-            if node.val < val:
-                pass
+            if self.nodeHeight(node.left.left) > self.nodeHeight(node.left.right):
+                result = self.leftleft(node,node.left,node.left.left)
+            else:
+                result = self.leftright(node,node.left,node.left.right)
+            if node is self.root:
+                self.root = result
+            return result
+
+        else:
+            result = self.helper(node.right,val)
+            if not result:
+                return None
+            node.right = result
+            heightDiff = self.nodeHeight(node.right) - self.nodeHeight(node.left)
+            if abs(heightDiff) <= 1:
+                node.height = max(self.nodeHeight(node.left), self.nodeHeight(node.right)) + 1
+                return node
+            if self.nodeHeight(node.right.right) > self.nodeHeight(node.right.left):
+                result = self.rightright(node,node.right,node.right.right)
+            else:
+                result =  self.rightleft(node,node.right,node.right.left)
+            if node is self.root:
+                self.root = result
+            return result
 
 
     def leftleft(self,grand,parent,child):
-        childright = child.right
-        grand.left = child
-        child.right = parent
-        parent.left = childright
+        '''
+        左左旋转
+        :param grand:AVLTreeNode，表示第一个高度不平衡的节点
+        :param parent: AVLTreeNode，表示中间的节点
+        :param child: AVLTreeNode，表示最下层的节点
+        :return: AVLTreeNode，表示这一枝上的新根节点
+        '''
+        pRight = parent.right
+        grand.left = pRight
+        grand.height = max(self.nodeHeight(grand.left),self.nodeHeight(grand.right)) + 1
+        parent.right = grand
         parent.height = max(self.nodeHeight(parent.left),self.nodeHeight(parent.right)) + 1
-        child.height = max(self.nodeHeight(child.left),self.nodeHeight(child.right)) + 1
-
+        return parent
 
     def leftright(self,grand,parent,child):
-        pass
+        '''
+        左右旋转
+        :param grand:AVLTreeNode，表示第一个高度不平衡的节点
+        :param parent:AVLTreeNode，中间节点
+        :param child:AVLTreeNode，最下层节点
+        :return:AVLTreeNode，该枝新的根节点
+        '''
+        cLeft = child.left
+        parent.right = cLeft
+        parent.height = max(self.nodeHeight(parent.left),self.nodeHeight(parent.right)) + 1
+        child.left = parent
+        child.height = max(self.nodeHeight(child.left),self.nodeHeight(child.right)) + 1
+        return self.leftleft(grand,child,parent)
 
-    def rightleft(self):
-        pass
+    def rightleft(self,grand,parent,child):
+        '''
+        右左旋转
+        :param grand:AVLTreeNode,表示第一个高度不平衡的节点
+        :param parent:AVLTreeNode,中间节点
+        :param child:AVLTreeNode，最下层节点
+        :return:AVLTreeNode，该枝新的根节点
+        '''
+        cRight = child.right
+        parent.left = cRight
+        parent.height = max(self.nodeHeight(parent.left),self.nodeHeight(parent.right)) + 1
+        child.right = parent
+        child.height = max(self.nodeHeight(child.left),self.nodeHeight(child.right)) + 1
+        return self.rightright(grand,child,parent)
 
     def rightright(self,grand,parent,child):
-        childleft = child.left
-        grand.right = child
-        child.left = parent
-        parent.right = childleft
+        '''
+        右右旋转
+        :param grand:AVLTreeNode，表示第一个高度不平衡的节点
+        :param parent: AVLTreeNode，表示中间的节点
+        :param child: AVLTreeNode，表示最下层的节点
+        :return: AVLTreeNode，表示这一枝上的新根节点
+        '''
+        pLeft = parent.left
+        grand.right = pLeft
+        grand.height = max(self.nodeHeight(grand.left),self.nodeHeight(grand.right)) + 1
+        parent.left = grand
         parent.height = max(self.nodeHeight(parent.left),self.nodeHeight(parent.right)) + 1
-        child.height = max(self.nodeHeight(child.left),self.nodeHeight(child.right)) + 1
+        return parent
 
     def nodeHeight(self,node):
         if not node:
@@ -394,21 +497,8 @@ class AVLTree(FINDBTree):
         return node.height
 
 if __name__ == '__main__':
-    tree = FINDBTree()
-    root = BTNode(5)
-    tree.reset(root)
-    left = BTNode(3)
-    right = BTNode(7)
-    root.left = left
-    root.right = right
-    leftleft = BTNode(4)
-    leftright = BTNode(2)
-    left.left = leftleft
-    left.right = leftright
-    rightleft = BTNode(9)
-    rightright = BTNode(10)
-    # right.left = rightleft
-    right.right = rightright
-    print(tree.emptyBTree())
-    print(tree.fullBinTree())
-    print(tree.totalBinTree())
+    tree = AVLTree()
+    for i in range(10):
+        tree.insert(i)
+        print(BTree.preOrder(tree.root))
+    tree.insert(3)
